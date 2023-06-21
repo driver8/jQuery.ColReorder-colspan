@@ -1,0 +1,432 @@
+<html>
+<head>
+    <!--
+      jQuery().jquery                   3.5.1
+      $.ui.version                      1.12.1
+      $.fn.dataTable.version            1.10.22
+      $.fn.dataTable.Buttons.version    2.3.6
+      $.fn.dataTable.ColReorder.version 1.5.3
+    -->
+    <script src="./libs/jquery-3.5.1.js"></script>
+    <script src="./libs/jquery-ui/jquery-ui.js"></script>
+    <script src="./libs/jquery.dataTables.js"></script>
+    <script src="./libs/dataTables.buttons.js"></script>
+    <script src="./libs/buttons.colVis.js"></script>
+    <script src="./dataTables.colReorder.js"></script>
+    <script>
+    $( document ).ready(function() {
+		var tbl = $('#t2').DataTable({
+			dom: 'Bt',
+			paging: false,
+			ordering: false,
+			info: false,
+			searching: false,
+			scrollX: true,
+			colReorder: true,
+			buttons: ['colvis'],
+		});
+
+		/*
+		tbl.on( 'column-reorder', function ( e, settings, details ) {
+			//var headerCell = $( table.column( details.to ).header() );
+			//headerCell.addClass( 'reordered 1' );
+			setTimeout( function () {
+				//headerCell.removeClass( 'reordered' );
+				console.log('reordered 2');
+			}, 500 );
+		} );
+		*/
+
+		// $("#head-id-a" ).position({
+		// 	my: "center center",
+		// 	at: "center center",
+		// 	of: "#head-id"
+		// });
+
+		/*
+		const appendDraggable = function(elem, draggable2){
+			const th = elem;
+			const draggable = elem.draggable;
+			const {start, drag, stop} = draggable;
+			const {start2, drag2, stop2} = draggable2;
+
+			elem.draggable(Object.assign(draggable, draggable2, {
+				start: function(){
+					start && start.bind(th) && start();
+					start2 && start2.bind(th) && start2();
+				}.bind(th),
+
+				drag: function(){
+					drag && drag.bind(th) && drag();
+					drag2 && drag2.bind(th) && drag2();
+				}.bind(th),
+
+				stop:function(){
+					stop && stop.bind(th) && stop();
+					stop2 && stop2.bind(th) && stop2();
+				}.bind(th),
+			}))
+		}
+		*/
+		var mouseState = false;
+
+		var elem2 = null;
+
+		var thWithinContext = null;
+
+		const fillWithinContext = function(e, thEl, withinThEl){
+			console.log("fill", thEl, withinThEl);
+			thWithinContext = {
+				moveTh : $(thEl),
+				withinTh : $(withinThEl),
+			}
+		};
+
+		const applyThWithin = function(thId){
+			console.log("applyThWithin " + thId);
+			const thEl = document.querySelector("#" + thId);
+			if (thEl && thEl.dataset.withinTh){
+				const withinThEl = document.querySelector("#" + thEl.dataset.withinTh);
+				if (withinThEl){
+					//ready
+					//subscribe
+					$(thEl).mousedown(fillWithinContext.bind(null, null, $(thEl), $(withinThEl)));
+					// thWithinContext.moveTh.mousedown(function(e){
+					// 	//fill context
+					// 	fillWithinContext.apply()
+					// 	thWithinContext.moveTh = $(thEl);
+					// 	thWithinContext.withinTh = $(withinThEl);
+					// })
+				}
+			}
+
+		}
+
+		//const findCloneElement() //DTCR_clonedTable
+
+		const append = function(elemId){
+			console.log("append");
+			var isDragging = false;
+			$('#' + elemId).mousedown(function(e){
+				//console.log("down on me");
+				//isDragging = true;
+				elem2 = $(this);
+				console.log(elem2.parentOffset);
+			})
+			// .mousemove(function() {
+			// 	console.log("move")
+			// 	mouseState && console.log("move 2");
+			// 	//isDragging = true;
+			// })
+			// .mouseup(function() {
+			// 	console.log("up on me");
+			// 	// var wasDragging = isDragging;
+			// 	// isDragging = false;
+			// 	// if (!wasDragging) {
+		    // 	// 	//$("#throbble").toggle();
+			// 	// }
+			// 	if (isDragging){
+			// 		isDragging = false;
+			// 		console.log("over");
+			// 	}
+			// });
+		};
+
+
+		$(document).mousedown(function(e){
+			mouseState = true;
+		})
+
+		$(document).mousemove(function(e){
+
+			//console.log("move elem within", thWithinContext);
+
+			if (thWithinContext){
+				//console.log("move elem", elem2.offset());
+
+				//console.log("move elem", $(e.toElement).offset());
+
+				//console.log("move elem", $(e.toElement).offset(), $(e.toElement).offset(), elem2.offsetParent(), elem2[0].parentElement);
+				//console.log("move elem",$(e.toElement).offset().left, $(elem2[0].parentElement).offset().left, );
+
+				// const x1 = $(elem2[0].parentElement).offset().left;
+				// //const x2 = x1 + parseInt($(elem2[0].parentElement).css("width"));
+				// const x2 = x1 + $(elem2[0].parentElement).width();
+				// //const xe = $(e.toElement).offset().left;
+				// const xe = e.clientX;
+
+
+				const x1 = thWithinContext.withinTh.offset().left;
+				const x2 = x1 + thWithinContext.withinTh.width();
+				const xe = e.clientX;
+
+				//if (e.toElement.position){
+				if (true){
+					if (xe <= x1){
+
+						//console.log("x1 case");
+						var diffx = x1 - xe;
+
+						// e.clientX = x1;
+						// e.offsetX = x1;
+						// e.pageX = x1;
+						// e.screenX = x1;
+
+						e.clientX += diffx;
+						e.offsetX += diffx;
+						e.pageX += diffx;
+						e.screenX += diffx;
+
+						//e.preventDefault();
+						//e.stopPropagation();
+
+						return false;
+
+						// $(e.toElement).position({
+						//  	my: "left center",
+						//  	at: "left center",
+						//  	of: "#head-id",
+						//  	within : "#head-id",
+						// });
+					}else
+					if (xe >= x2){
+						console.log("x2 case", x2)
+						var diffx = xe - x2;
+
+						// e.clientX = x2;
+						// e.offsetX = x2;
+						// e.pageX = x2;
+						// e.screenX = x2;
+
+						e.clientX -= diffx;
+						e.offsetX -= diffx;
+						e.pageX -= diffx;
+						e.screenX -= diffx;
+
+
+						//e.stopPropagation();
+						//e.preventDefault();
+
+						return false;
+						// $(e.toElement).position({
+						//  	my: "right",
+						//  	at: "right",
+						//  	of: "#head-id",
+						//  	within : "#head-id",
+						// });
+					}
+					// else{
+
+					// }
+				}
+
+
+
+				//console.log("move elem", e.toElement().css());
+
+				//elem2.parentElement
+
+				// e.clientX
+				// e.offsetX
+				// e.pageX
+				// e.screenX
+
+				//elem .offset() {top left}
+
+				//e.toElement = elem2
+				//e.toElement.localName == 'th'
+				//elem2.offsetParent
+
+			}
+			//mouseState = true;
+		})
+
+		$(document).mouseup(function(e){
+			//elem2 = null;
+			//mouseState = false;
+			//console.log("remove")
+			thWithinContext = null;
+		})
+
+		//appendDraggable($("#head-id"), {})
+
+		//append("head-id-a");
+		//applyThWithin("head-id-a");
+
+
+		// console.log($("#head-id-a").draggable);
+
+		// $("#head-id-a").draggable({
+		// 	start: function() {
+		// 		console.log("start")
+		// 	},
+		// 	drag: function() {
+		// 		console.log("drag")
+		// 	},
+		// 	stop: function() {
+		// 		console.log("stop")
+		// 	}
+		// });
+
+		//$(document).click(function( event ) {
+		// $("#head-id").(function( event ) {
+		// 	//console.log($("#head-id"));
+		// 	console.log(event, document.mouseState);
+		// 	// $("#head-id-a").position({
+		// 	// 	//my: "left+3 bottom-3",
+		// 	// 	my: "center center",
+		// 	// 	at: "center center",
+		// 	// 	of: event,
+		// 	// 	//of : "#head-id",
+
+		// 	// 	collision: "none",
+		// 	// });
+		// });
+
+    });
+
+
+    </script>
+    <style>
+    body {
+       width: 100%;
+       height: 100%;
+       margin: 0px;
+       padding: 0px;
+       user-select:none;
+    }
+   .container {
+       position: absolute;
+       top: 50%;
+       left: 58%;
+       border: 1px solid red;
+       bottom: 0;
+       right: 0;
+       transform: translate(-70%, -80%);
+       overflow-x:auto;
+       height:fit-content;
+       padding-left: 20px;
+       padding-top: 20px;
+       padding-bottom: 20px;
+       padding-right: 20px;
+   }
+	table {
+		border-collapse: collapse;
+      width: 100%;
+	}
+	th, td {
+		border: 1px solid black;
+		padding: 0.25rem 0.5rem;
+      min-width: 50px;
+	}
+	th {
+		background: lightgrey;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	td {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+   .dataTables_scrollBody th {
+      border:none;
+   }
+   table.DTCR_clonedTable.dataTable {
+     position: absolute !important;
+     background-color: rgba(255, 255, 255, 0.7);
+     z-index: 202;
+   }
+
+   div.DTCR_pointer {
+      width: 2px;
+      background-color: yellow;
+      z-index: 201;
+   }
+   </style>
+</head>
+<body>
+
+   <div class="container">
+
+      <table id="t1">
+         <thead >
+            <tr>
+            	<th >A</th>
+            	<th>B</th>
+            	<th>C</th>
+            	<th>D</th>
+            	<th>E</th>
+            	<th>F</th>
+            </tr>
+         </thead>
+      <tbody>
+         <tr>
+            <td>a1</td><td>b1</td><td>c1</td><td>d1</td><td>e1</td><td>f1</td>
+         </tr>
+      </tbody>
+
+
+      <table id="t2">
+         <thead id="head-id">
+			<!-- <tr>
+            	<th >A</th>
+            	<th >B</th>
+            	<th >C</th>
+            	<th >D</th>
+            	<th >E</th>
+            	<th >F</th>
+            </tr> -->
+            <tr>
+            	<th rowspan="2">A</th>
+            	<th colspan="2" group_id="0">B</th>
+            	<th rowspan="2">C</th>
+            	<th colspan="3" group_id="1" id="head-id-d" >D</th>
+            	<th rowspan="2">E</th>
+            	<th rowspan="2">F</th>
+            </tr>
+            <tr>
+            	<th group_id="0">b1</th>
+            	<th group_id="0">b2</th>
+            	<th group_id="1">d1</th>
+            	<th group_id="1" data-within-th="head-id-d" id="head-id-a">d2</th>
+            	<th group_id="1">d3</th>
+            </tr>
+         </thead>
+      <tbody>
+         <tr>
+            <td>a1</td><td>b11</td><td>b21</td><td>c1</td><td>d11</td><td>d12</td><td>d13</td><td>e1</td><td>f1</td>
+         </tr>
+      </tbody>
+      </table>
+
+
+      <!-- <table id="t2">
+         <thead>
+            <tr>
+            	<th rowspan="2">A</th>
+            	<th colspan="2" group_id="0">B</th>
+            	<th rowspan="2">C</th>
+            	<th colspan="3" group_id="1">D</th>
+            	<th rowspan="2">E</th>
+            	<th rowspan="2">F</th>
+            </tr>
+            <tr>
+            	<th group_id="0">b1</th>
+            	<th group_id="0">b2</th>
+            	<th group_id="1">d1</th>
+            	<th group_id="1">d2</th>
+            	<th group_id="1">d3</th>
+            </tr>
+         </thead>
+      <tbody>
+         <tr>
+            <td>a1</td><td>b11</td><td>b21</td><td>c1</td><td>d11</td><td>d12</td><td>d13</td><td>e1</td><td>f1</td>
+         </tr>
+      </tbody>
+      </table> -->
+
+
+   </div>
+</body>
+</html>

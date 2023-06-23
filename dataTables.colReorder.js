@@ -81,17 +81,21 @@ function fnInvertKeyValues( aIn )
 
 function fnArraySwitch( aArray, iFrom, iTo, countFrom = 1, countTo = 1)
 {
+	if (iFrom < iTo)
+		iTo -= (countFrom - 1);
+	// else
+	// 	iTo -= (countFrom - 1);
+
 	if (isNaN(iTo)){
-		//iTo = aArray.length - 1;
 		var mStoreFrom = aArray.splice( iFrom, countFrom );
+		//iTo = aArray.length - 1;
 		aArray.push(...mStoreFrom);
 	}else{
 		var mStoreFrom = aArray.splice( iFrom, countFrom );
+		//iTo -= (countFrom - 1);
 		aArray.splice(iTo, 0, ...mStoreFrom);
 	}
 }
-
-
 
 /**
  * Switch the positions of nodes in a parent node (note this is specifically designed for
@@ -184,13 +188,13 @@ function fnDomSwitch( nParent, iFrom, iTo, numCols, countFrom = 1 , countTo = 1,
 
 			log("fnDomSwitch3", `${iFrom}->${iTo}(${iToFixed})  (cnt: ${countFrom})`, ...anTags.map( E => (E ? $(E).html() : '_') ), nStore);
 
-			var eStoreFixed = null;
-			var insertBeforeElement = null;
+			/*
 			iToFixed += countFrom;
-			do{
-				insertBeforeElement = anTags[iToFixed++]
+
+			while(insertBeforeElement === null && iToFixed < anTags.length)
+			{
+				insertBeforeElement = anTags[++iToFixed];
 			}
-			while(insertBeforeElement === null && iToFixed < anTags.length);
 
 			// wich element to insert. count first non null from the end of moving part
 			do {
@@ -209,14 +213,23 @@ function fnDomSwitch( nParent, iFrom, iTo, numCols, countFrom = 1 , countTo = 1,
 				}
 				//console.log(eStoreFixed);
 			}while(nStore.length > 0);
+			*/
 		}
 
-		console.log("fnDomSwitch4", iFrom, iTo, iToFixed, ...anTags.map( E =>( E ? $(E).text() : '_') ));
+		//console.log("fnDomSwitch4", iFrom, iTo, iToFixed, ...anTags.map( E =>( E ? $(E).text() : '_') ));
 
-		for (var i = anTags.length; i >=0 ; i--)
+		var eStoreFixed = null;
+		var insertBeforeElement = null;
+
+		for (var i = anTags.length; i >= 0; i--)
 		{
 			if (anTags[i])
 			{
+				if (insertBeforeElement === null)
+					insertBeforeElement = nParent.appendChild(anTags[i]);
+				else
+					insertBeforeElement = nParent.insertBefore(anTags[i], insertBeforeElement);
+
 				$(anTags[i]).removeAttr("data-column-index");
 				$(anTags[i]).attr("data-column-index", i);
 			}
@@ -1170,6 +1183,9 @@ $.extend( ColReorder.prototype, {
 		var offset = target.offset();
 		var row = parseInt( $(nTh).attr('data-row-index'), 10 );
 		var idx = parseInt( $(nTh).attr('data-column-index'), 10 );
+		var lockPower = $(nTh).attr('colspan');
+		lockPower = lockPower ? parseInt(lockPower, 10) : 1;
+
 		var parentLockGroup = null;
 		var lockGroup = null;
 
@@ -1190,10 +1206,10 @@ $.extend( ColReorder.prototype, {
 		parentLockGroup = parseInt($(this.s.mouse.target).attr('parent-lock-group'));
 		lockGroup = parseInt($(this.s.mouse.target).attr('lock-group'));
 
-
 		var lockIndex1 = null, lockIndex2 = null;
 
-		if (parentLockGroup > 0)
+
+		//if (parentLockGroup > 0)
 		for (const row of this.s.dt.aoColumnLocks){
 			for (let i in row){
 				if (lockIndex1 === null && row[i] == parentLockGroup)
@@ -1217,6 +1233,7 @@ $.extend( ColReorder.prototype, {
 		this.s.mouse.targetIndex = idx;
 		this.s.mouse.targetRow = row;
 		this.s.mouse.fromIndex = idx;
+		this.s.mouse.lockPower = lockPower;
 		this.s.mouse.loc = idx;
 		this.s.mouse.row = row;
 
@@ -1292,6 +1309,7 @@ $.extend( ColReorder.prototype, {
 		var lockGroup = parseInt($(this.s.mouse.target).attr('lock-group'));
 		var parentLockGroup = parseInt($(this.s.mouse.target).attr('parent-lock-group'));
 		var rowIndex = parseInt($(this.s.mouse.target).attr('data-row-index'));
+		var lockPower = this.s.mouse.lockPower;
 		var rowLocks = this.s.dt.aoColumnLocks[rowIndex];
 
 		let leftX = 0, rightX = 5000;
@@ -1310,25 +1328,12 @@ $.extend( ColReorder.prototype, {
 		// 	that.s.aoTargets[0].x + $(this.s.dt.aoHeader[0][lockIndex2].cell)[0].clientWidth
 		// 	: that.s.aoTargets[lockIndex2 + 1].x ;
 
-
-
-		// if (lockIndex1 === null && lockIndex2 === null){
-		// 	lockIndex1 = 0;
-		// 	lockIndex2 = this.s.dt.aoColumns.length - 1;
-		// }
-
-		//log(this.s.dt.aoHeader, $(this.s.dt.aoHeader[0][lockIndex1].cell));
-		//log(lockIndex1, lockIndex2);
-
 		//leftX = $(this.s.dt.aoHeader[0][lockIndex1].cell).offset().left;
 		//rightX = $(this.s.dt.aoHeader[0][lockIndex2].cell).offset().left + $(this.s.dt.aoHeader[0][lockIndex2].cell)[0].clientWidth;
 
 		//log($(this.s.dt.aoColumns[lockIndex2].nTh));
 
-
 		var cursorXPosiotion = this._fnCursorPosition(e, 'pageX');
-
-		//log(that.s.aoTargets);
 
 		var targetsPrev = function (i) {
 			while (i >= 0) {
@@ -1441,13 +1446,42 @@ $.extend( ColReorder.prototype, {
 		if (this.s.mouse.fromIndex == newTargetId){
 			return;
 		}else
-		if (this.s.mouse.fromIndex < newTargetId && rowLocks[newTargetId] > 0 && rowLocks[newTargetId] == rowLocks[newTargetId + 1]){
-			log("colspan drop 1", newTargetId)
-			return;
-		}else
-		if (this.s.mouse.fromIndex > newTargetId && rowLocks[newTargetId] > 0 && rowLocks[newTargetId] == rowLocks[newTargetId - 1]){
-			log("colspan drop 2", newTargetId)
-			return;
+		if (rowLocks[newTargetId] > 0){
+			// if (lockGroup == rowLocks[newTargetId]){
+			// 	log("self lock drop 1", newTargetId)
+			// 	return
+			// }else
+			if (this.s.mouse.fromIndex < newTargetId)
+			{
+				if (lockGroup == rowLocks[newTargetId])
+				{
+					log("self lock drop 1", newTargetId)
+					return;
+				}else{
+
+					if (rowLocks[newTargetId] == rowLocks[newTargetId + 1])
+					{
+						log("colspan drop 1", newTargetId)
+						return;
+					}
+				}
+
+			}else
+			if (this.s.mouse.fromIndex > newTargetId)
+			{
+				if (lockGroup == rowLocks[newTargetId])
+				{
+					log("self lock drop 2", newTargetId)
+					return;
+				}else{
+					if (rowLocks[newTargetId] == rowLocks[newTargetId - 1])
+					{
+						log("colspan drop 2", newTargetId)
+						return;
+					}
+				}
+
+			}
 		}
 
 		if (newTargetId != target.to){
@@ -1530,12 +1564,16 @@ $.extend( ColReorder.prototype, {
 			this.s.mouse.toIndex = lastNotHidden().to;
 		}
 
-		//log("move ",this.s.mouse.fromIndex, this.s.mouse.toIndex);
+		log("move ",this.s.mouse.fromIndex, this.s.mouse.toIndex);
 
 		// Perform reordering if realtime updating is on and the column has moved
 		if ( this.s.init.bRealtime && lastToIndex !== this.s.mouse.toIndex ) {
 			this.s.dt.oInstance.fnColReorder( this.s.mouse.fromIndex, this.s.mouse.toIndex, undefined, undefined, this.s.mouse.row, this.s.dt.aoHeader);
+
+			//this.s.mouse.fromIndex = $(this.s.dt.aoHeader[this.s.mouse.row][this.s.mouse.toIndex]).attr('data-column-index');
 			this.s.mouse.fromIndex = this.s.mouse.toIndex;
+			log("fix fromIndex ", this.s.mouse.fromIndex, this.s.dt.aoHeader);
+			// lastToIndex = this.s.mouse.toIndex;
 
 			// Not great for performance, but required to keep everything in alignment
 			if ( this.s.dt.oScroll.sX !== "" || this.s.dt.oScroll.sY !== "" )

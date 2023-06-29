@@ -1199,13 +1199,18 @@ $.extend( ColReorder.prototype, {
 
 		log(`_fnMouseDown at [${idx},${row}]` , jnTh.html());
 
-		var cursorX = this._fnCursorPosition( e, 'pageX' );
-		var cursorY = this._fnCursorPosition( e, 'pageY' );
+		var rectVisible = this.s.dt.nScrollBody.getBoundingClientRect();
+		var rectTable = that.s.dt.nTable.getBoundingClientRect();
+		var xfix = rectTable.x - rectVisible.x;
+
+		var cursorX = this._fnCursorPosition(e, 'pageX');
+		var cursorY = this._fnCursorPosition(e, 'pageY');
 
 		var targetRealWidth = parseInt(jnTh.css("width")) + parseInt(jnTh.css("padding-left")) + parseInt(jnTh.css("padding-right"));
 
 		this.s.mouse.startX = cursorX;
 		this.s.mouse.startY = cursorY;
+		this.s.mouse.xfix = xfix;
 
 		this.s.mouse.offsetX = cursorX - offset.left;
 		this.s.mouse.offsetY = cursorY - offset.top;
@@ -1277,18 +1282,18 @@ $.extend( ColReorder.prototype, {
 		for (var i in jHeaders){
 			//console.log("jHeaders[i]", i);
 			//console.log("jHeaders[i]", jHeaders[i].offset().left);
-			var left = parseInt(jHeaders[i].offset().left);
+			var left = Number(jHeaders[i].offset().left);
 			var t = {
-				to: i,
+				to: parseInt(i),
 				x : left,
 				x1: left - 50,
 				x2: left + 50,
 			};
 			jtargets.push(t);
 		}
-		var _lastx = parseInt(jHeaders[jHeaders.length - 1].offset().left + jHeaders[jHeaders.length - 1].clientWidth);
+		var _lastx = Number(jHeaders[jHeaders.length - 1].offset().left + jHeaders[jHeaders.length - 1].clientWidth);
 		jtargets.push({
-			to: jHeaders.length,
+			to: parseInt(jHeaders.length),
 			x : _lastx,
 			x1: _lastx - 50,
 			x2: _lastx + 50,
@@ -1336,23 +1341,57 @@ $.extend( ColReorder.prototype, {
 	{
 		var that = this;
 		var colReorderCfg = this.s.dt.oInit.colReorder;
-		var leftBorder  = colReorderCfg.leftBorder ?  parseInt(colReorderCfg.leftBorder): 0;
-		var rightBorder = colReorderCfg.rightBorder ?  parseInt(colReorderCfg.rightBorder): 0;
+
+		var leftBorder;
+		var rightBorder;
+
+		if (colReorderCfg.leftBorder == 'center'){
+			leftBorder = -9999;
+		}else{
+			leftBorder  = colReorderCfg.leftBorder ?  parseInt(colReorderCfg.leftBorder): 0;
+		}
+
+		if (colReorderCfg.rightBorder == 'center'){
+			rightBorder = -9999;
+		}else{
+			rightBorder  = colReorderCfg.rightBorder ?  parseInt(colReorderCfg.rightBorder): 0;
+		}
+
+		var movementX = e.originalEvent.movementX;
+		var rectVisible = this.s.dt.nScrollBody.getBoundingClientRect();
 
 		var doScroll = function(e, xLeft, xRight){
-			var movementX = e.originalEvent.movementX;
+
 			var rectVisible = that.s.dt.nScrollBody.getBoundingClientRect();
-			var rectLeft =  rectVisible.left + leftBorder;
-			var rectRight =  rectVisible.right - rightBorder;
 
-			if (xLeft < rectLeft && movementX < 0){
-				that.s.dt.nScrollBody.scrollBy(movementX * 3, 0);
-				return true;
-			}
+			if (leftBorder == -9999 && rightBorder == -9999)
+			{
+				var midRect = rectVisible.left + rectVisible.width / 2;
+				var xCenter = (xLeft + xRight) / 2;
 
-			if (xRight > rectRight && movementX > 0){
-				that.s.dt.nScrollBody.scrollBy(movementX * 3, 0);
-				return true;
+				if (xCenter < midRect && movementX < 0){
+					that.s.dt.nScrollBody.scrollBy(movementX * 3, 0);
+					return true;
+				}
+
+				if (xCenter > midRect && movementX > 0){
+					that.s.dt.nScrollBody.scrollBy(movementX * 3, 0);
+					return true;
+				}
+
+			}else{
+				var rectLeft =  rectVisible.left + leftBorder;
+				var rectRight =  rectVisible.right - rightBorder;
+
+				if (xLeft < rectLeft && movementX < 0){
+					that.s.dt.nScrollBody.scrollBy(movementX * 3, 0);
+					return true;
+				}
+
+				if (xRight > rectRight && movementX > 0){
+					that.s.dt.nScrollBody.scrollBy(movementX * 3, 0);
+					return true;
+				}
 			}
 
 			return false;
@@ -1395,10 +1434,12 @@ $.extend( ColReorder.prototype, {
 		var targetId = null;
 		var lastToIndex = this.s.mouse.toIndex;
 
-		var rectTable = that.s.dt.nTable.getBoundingClientRect();
-		var rectVisible = this.s.dt.nScrollBody.getBoundingClientRect();
-		var xfix = rectTable.x - rectVisible.x;
 		var scrollResult = doScroll(e, mouseX - targetOffsetLeft, mouseX + targetOffsetRight);
+
+		var rectTable = that.s.dt.nTable.getBoundingClientRect();
+		var midRect = rectVisible.left + rectVisible.width / 2;
+		var xfix = rectTable.x - rectVisible.x; // current scroll fix
+		var xfix2 = xfix - Number(this.s.mouse.xfix)// after down fix
 
 		// borders
 		leftX = $(this.s.dt.aoHeader[0][lockIndex1].cell).offset().left;
@@ -1409,30 +1450,36 @@ $.extend( ColReorder.prototype, {
 
 		var rightXFixed = rightX - this.s.mouse.target.clientWidth;
 
-		//log(leftX, rightX, rightXFixed,  mouseX, targetOffsetLeft, targetOffsetRight)
+		//log(leftX, rightX, rightXFixed,  mouseX, targetOffsetLeft, targetOffsetRight, leftBorder, rightBorder)
 
 		/* Position the element - we respect where in the element the click occured */
+		var dragX = this._fnCursorPosition( e, 'pageX' ) - this.s.mouse.offsetX;
+		var dragY = this._fnCursorPosition( e, 'pageY' ) - this.s.mouse.offsetY;
+
+		if (leftBorder == -9999 && rightBorder == -9999)
+		{
+			//if (mouseX < midRect && movementX < 0 || mouseX > midRect && movementX > 0){
+				dragX = midRect;
+				mouseX = midRect;
+			//}
+		}else
 		if ((leftX + leftBorder) > (mouseX - targetOffsetLeft))
 		{
-			this.dom.drag.css( {
-				left: leftX + leftBorder,
-				top: this._fnCursorPosition( e, 'pageY' ) - this.s.mouse.offsetY
-			});
+			dragX = leftX + leftBorder;
 			mouseX = leftX;
 		}else
 		if ((mouseX + targetOffsetRight) > (rightX - rightBorder))
 		{
-			this.dom.drag.css( {
-				left: rightXFixed - rightBorder,
-				top: this._fnCursorPosition( e, 'pageY' ) - this.s.mouse.offsetY
-			});
+			dragX = rightXFixed - rightBorder,
 			mouseX = rightX;
-		}else{
-			this.dom.drag.css( {
-				left: this._fnCursorPosition( e, 'pageX' ) - this.s.mouse.offsetX,
-				top: this._fnCursorPosition( e, 'pageY' ) - this.s.mouse.offsetY
-			});
 		}
+
+		this.dom.drag.css( {
+			left: dragX,
+			top: dragY,
+		});
+
+		//log(this.dom.pointer)
 
 		if (scrollResult)
 			return;
@@ -1528,30 +1575,59 @@ $.extend( ColReorder.prototype, {
 
 		var targetByX = function (x) {
 			for(var t of jTargets){
-				if (t.x1 < x && x < t.x2)
+				if (t.x1 < x && x < t.x2){
 					return t;
+				}
 			}
 			return null;
 		}
 
 		//find current target
-		target = targetByX(mouseX);
+		 //target = targetByX(mouseX + xfix - targetOffsetLeft);
 
-		var newTargetId = null;
+		var targetLeft = targetByX(mouseX - targetOffsetLeft - xfix2);
+		var targetRight = targetByX(mouseX + targetOffsetRight - xfix2);
 
-        if (target) {
-        	//color
-        	// if (mouseX > rectVisible.left && mouseX < (rectVisible.left +  rectVisible.width))
-            this.dom.pointer.css('left', target.x);
-            // else
-            // 	this.dom.pointer.css('display', 'none');
+		// if (targetLeft && targetLeft.to == this.s.mouse.fromIndex)
+		// 	targetLeft = null;
+		// if (targetRight && targetRight.to == this.s.mouse.fromIndex)
+		// 	targetRight = null;
 
-            this.s.mouse.toIndex = target.to;
-			newTargetId = target.to;
-        }else
+		if (targetLeft !== null && targetRight !== null)
+		{
+			if ((mouseX - targetOffsetLeft + xfix) - targetLeft.x1 < targetRight.x2 - (mouseX + targetOffsetRight + xfix))
+			{
+				target = targetLeft;
+			}else{
+				target = targetRight;
+			}
+
+		}else{
+			target = targetLeft || targetRight;
+		}
+
+		//&& target not self
+
+
+		if (!target)
 			return;
 
-		/* find x borders*/
+		console.log('targetLeft', xfix2, target);
+
+		var newTargetId = target.to;
+		this.s.mouse.toIndex = newTargetId;
+
+        // if (target) {
+        // 	//color
+        //     this.dom.pointer.css('left', target.x - xfix);
+        //     this.s.mouse.toIndex = parseInt(target.to);
+		// 	newTargetId = parseInt(target.to);
+
+        // }
+
+
+
+		/* find x borders */
 		if (parentLockGroup == 0){
 			lockIndex1 = 0;
 			lockIndex2 = this.s.dt.aoColumns.length - 1;
@@ -1606,42 +1682,30 @@ $.extend( ColReorder.prototype, {
 
 		if (this.s.mouse.fromIndex == newTargetId){
 			return;
-		}else
-		if (rowLocks[newTargetId] > 0){
-			// if (lockGroup == rowLocks[newTargetId]){
-			// 	log("self lock drop 1", newTargetId)
-			// 	return
-			// }else
+		}else //if (rowLocks[newTargetId] > 0)
+		{
+			if (lockGroup > 0 && lockGroup == rowLocks[newTargetId])
+			{
+				log("self lock drop 12", newTargetId)
+				return;
+			}
+
 			if (this.s.mouse.fromIndex < newTargetId)
 			{
-				if (lockGroup == rowLocks[newTargetId])
+				//log("colspan drop 1", newTargetId, rowLocks[newTargetId], rowLocks[newTargetId + 1], rowLocks)
+				if (rowLocks[newTargetId] == rowLocks[newTargetId + 1])
 				{
-					log("self lock drop 1", newTargetId)
+					log("colspan drop 1", newTargetId)
 					return;
-				}else{
-
-					if (rowLocks[newTargetId] == rowLocks[newTargetId + 1])
-					{
-						log("colspan drop 1", newTargetId)
-						return;
-					}
 				}
-
 			}else
 			if (this.s.mouse.fromIndex > newTargetId)
 			{
-				if (lockGroup == rowLocks[newTargetId])
+				if (rowLocks[newTargetId] == rowLocks[newTargetId - 1])
 				{
-					log("self lock drop 2", newTargetId)
+					log("colspan drop 2", newTargetId)
 					return;
-				}else{
-					if (rowLocks[newTargetId] == rowLocks[newTargetId - 1])
-					{
-						log("colspan drop 2", newTargetId)
-						return;
-					}
 				}
-
 			}
 		}
 
@@ -1655,6 +1719,12 @@ $.extend( ColReorder.prototype, {
 			return;
 		}
 
+		if (target) {
+        	//color
+            this.dom.pointer.css('left', target.x + xfix2);
+            this.s.mouse.toIndex = target.to;
+			newTargetId = target.to;
+        }
 
 		this.s.mouse.toIndex = newTargetId;
 		log("goon target id", newTargetId);
@@ -1699,8 +1769,6 @@ $.extend( ColReorder.prototype, {
 		// }
 
            //target = targetById(this.s.mouse.toIndex);
-
-
 
         // if (target) {
         // 	//color

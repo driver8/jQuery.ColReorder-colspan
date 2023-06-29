@@ -1612,7 +1612,7 @@ $.extend( ColReorder.prototype, {
 		if (!target)
 			return;
 
-		console.log('targetLeft', xfix2, target);
+		//console.log('targetLeft', xfix2, target);
 
 		var newTargetId = target.to;
 		this.s.mouse.toIndex = newTargetId;
@@ -1790,8 +1790,8 @@ $.extend( ColReorder.prototype, {
 		if ( this.s.init.bRealtime && lastToIndex !== this.s.mouse.toIndex ) {
 			this.s.dt.oInstance.fnColReorder( this.s.mouse.fromIndex, this.s.mouse.toIndex, undefined, undefined, this.s.mouse.targetRow, this.s.dt.aoHeader);
 
-			//this.s.mouse.fromIndex = $(this.s.dt.aoHeader[this.s.mouse.targetRow][this.s.mouse.toIndex]).attr('data-column-index');
-			this.s.mouse.fromIndex = this.s.mouse.toIndex;
+			this.s.mouse.fromIndex = $(this.s.dt.aoHeader[this.s.mouse.targetRow][this.s.mouse.toIndex].cell).attr('data-column-index');
+			//this.s.mouse.fromIndex = this.s.mouse.toIndex;
 			log("fix fromIndex ", this.s.mouse.fromIndex, this.s.dt.aoHeader);
 			// lastToIndex = this.s.mouse.toIndex;
 

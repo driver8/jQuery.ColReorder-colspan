@@ -1431,6 +1431,7 @@ $.extend( ColReorder.prototype, {
 		var dragX = this._fnCursorPosition( e, 'pageX' ) - this.s.mouse.offsetX;
 		var dragY = this._fnCursorPosition( e, 'pageY' ) - this.s.mouse.offsetY;
 
+		/*
 		if (leftBorder == -9999 && rightBorder == -9999)
 		{
 			//if (mouseX < midRect && movementX < 0 || mouseX > midRect && movementX > 0){
@@ -1448,6 +1449,19 @@ $.extend( ColReorder.prototype, {
 			dragX = rightXFixed - rightBorder,
 			mouseX = rightX;
 		}
+		*/
+
+		if ((leftX) > (mouseX - targetOffsetLeft))
+		{
+			dragX = leftX;
+			mouseX = leftX;
+		}else
+		if ((mouseX + targetOffsetRight) > (rightX))
+		{
+			dragX = rightXFixed,
+			mouseX = rightX;
+		}
+
 
 		this.dom.drag.css( {
 			left: dragX,
@@ -1646,13 +1660,13 @@ $.extend( ColReorder.prototype, {
 			//this.dom.pointer.css('left', highlightTarget.x - xfix);
 
 
-			if (scrollResult)
-				//this.dom.pointer.css('left', parseInt(this.dom.pointer.css('left')) - xfix2);
-				//this.dom.pointer.css('left', highlightTarget.x);
-				// if (rectVisible.left > dragX && dragX < rectVisible.right)
-				// 	this.dom.pointer.css('left', dragX);
-				1;
-			else{
+			// if (scrollResult)
+			// 	//this.dom.pointer.css('left', parseInt(this.dom.pointer.css('left')) - xfix2);
+			// 	//this.dom.pointer.css('left', highlightTarget.x);
+			// 	// if (rectVisible.left > dragX && dragX < rectVisible.right)
+			// 	// 	this.dom.pointer.css('left', dragX);
+			// 	1;
+			// else{
 				if (this.s.mouse.fromIndex == highlightTarget.to){
 					this.dom.pointer.css('left', highlightTarget.x + xfix2);
 				}else
@@ -1674,7 +1688,7 @@ $.extend( ColReorder.prototype, {
 				// else{
 				// 	1;
 				// }
-			}
+			//}
 
 
 			//this.dom.pointer.css('left', highlightTarget.x + xfix);

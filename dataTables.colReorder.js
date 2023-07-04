@@ -1213,7 +1213,6 @@ $.extend( ColReorder.prototype, {
 
 		this.s.mouse.startX = cursorX;
 		this.s.mouse.startY = cursorY;
-		this.s.mouse.xfix = xfix;
 
 		this.s.mouse.offsetX = cursorX - offset.left;
 		this.s.mouse.offsetY = cursorY - offset.top;
@@ -1329,7 +1328,8 @@ $.extend( ColReorder.prototype, {
 
 			var rectVisible2 = that.s.dt.nScrollBody.getBoundingClientRect();
 
-			xfix2 = movementX * 3;
+			//xfix2 = movementX * 3;
+			//xfix += movementX * 3;
 
 			if (leftBorder == -9999 && rightBorder == -9999)
 			{
@@ -1399,7 +1399,6 @@ $.extend( ColReorder.prototype, {
 		var targetId = null;
 		var lastToIndex = this.s.mouse.toIndex;
 
-		var xfix2; // after down fix
 		var scrollResult = doScroll(e, mouseX - targetOffsetLeft, mouseX + targetOffsetRight);
 		//this._fnRegions();
 
@@ -1409,6 +1408,13 @@ $.extend( ColReorder.prototype, {
 
 		var midRect = rectVisible.left + rectVisible.width / 2;
 		var xfix = rectTable.left - rectVisible.left; // current scroll fix
+		var xfix2; // after down fix
+
+		if (this.s.mouse.xfix){
+			xfix2 = xfix - Number(this.s.mouse.xfix) ;
+		}else{
+			xfix2 = xfix;
+		}
 
 		// borders
 		leftX = $(this.s.dt.aoHeader[0][lockIndex1].cell).offset().left;
@@ -1447,11 +1453,6 @@ $.extend( ColReorder.prototype, {
 			left: dragX,
 			top: dragY,
 		});
-
-		//log(this.dom.pointer)
-
-		//if (scrollResult)
-		//	return;
 
 		// console.log(this.s.dt.nTableWrapper, this.s.dt.nScrollBody.scroll({
 		// 	left: 1000,
@@ -1528,11 +1529,11 @@ $.extend( ColReorder.prototype, {
 		// var targetLeft = targetByX(mouseX - targetOffsetLeft + xfix2);
 		// var targetRight = targetByX(mouseX + targetOffsetRight + xfix2);
 		log("target x ", mouseX);
-		var highlightTarget = targetByX(mouseX);
-		var targetLeft = targetByX(mouseX - targetOffsetLeft);
-		var targetRight = targetByX(mouseX + targetOffsetRight);
+		var highlightTarget = targetByX(mouseX - xfix2);
+		var targetLeft = targetByX(mouseX - targetOffsetLeft - xfix2);
+		var targetRight = targetByX(mouseX + targetOffsetRight - xfix2);
 
-		console.log("xfix", xfix, highlightTarget.to);
+		console.log("xfix", mouseX, highlightTarget.to, parseInt(highlightTarget.x), " - " , xfix, xfix2, " " , ...jTargets.map( e=> parseInt(e.x)));
 
 		if (targetLeft && targetLeft.to == this.s.mouse.fromIndex)
 			targetLeft = null;
@@ -1653,7 +1654,7 @@ $.extend( ColReorder.prototype, {
 				1;
 			else{
 				if (this.s.mouse.fromIndex == highlightTarget.to){
-					this.dom.pointer.css('left', highlightTarget.x);
+					this.dom.pointer.css('left', highlightTarget.x + xfix2);
 				}else
 				{
 					var highlightTargetFixed = highlightTarget;
@@ -1667,7 +1668,7 @@ $.extend( ColReorder.prototype, {
 						highlightTargetFixed = jTargets[where];
 					}
 					log("target fixed", this.s.mouse.fromIndex, highlightTargetFixed.to, where);
-					this.dom.pointer.css('left', highlightTargetFixed.x);
+					this.dom.pointer.css('left', highlightTargetFixed.x  + xfix2);
 				}
 				// if ()
 				// else{
@@ -1830,8 +1831,7 @@ $.extend( ColReorder.prototype, {
 			return;
 		}
 
-		this.s.mouse.xfix = xfix;
-		var mouseXSc = mouseX - xfix;
+		var mouseXSc = mouseX - xfix2;
 
 		//from target to drag direction
 		if ( (mouseXSc - targetOffsetLeft) < target.x && (mouseXSc + targetOffsetRight) < target.right ){
@@ -1849,9 +1849,7 @@ $.extend( ColReorder.prototype, {
 			}
 		}
 
-
-
-          //target = targetById(this.s.mouse.toIndex);
+         //target = targetById(this.s.mouse.toIndex);
 
         // if (target) {
         // 	//color
@@ -1874,8 +1872,8 @@ $.extend( ColReorder.prototype, {
 
 			this.s.dt.oInstance.fnColReorder(
 							this.s.mouse.fromIndex,
-							newTargetId,
-							//this.s.mouse.toIndex,
+							newTargetId,//this.s.mouse.toIndex,
+
 							undefined, undefined, this.s.mouse.targetRow, this.s.dt.aoHeader);
 
 			this.s.mouse.lastFromIndex = this.s.mouse.fromIndex;
@@ -1935,8 +1933,8 @@ $.extend( ColReorder.prototype, {
 				var targetOffsetRight = this.s.mouse.targetOffsetRight;
 				let mouseX = Number(this._fnCursorPosition( e, 'pageX'));
 
-				if (this.s.mouse.xfix)
-					mouseX -= Number(this.s.mouse.xfix);
+				// if (this.s.mouse.xfix)
+				// 	mouseX -= Number(this.s.mouse.xfix);
 
 				//from target to drag direction
 				if ( (mouseX - targetOffsetLeft) < target.x && (mouseX + targetOffsetRight) < target.right ){
@@ -1990,6 +1988,11 @@ $.extend( ColReorder.prototype, {
         var isLTR = this._fnIsLtr();
 		this.s.aoTargets.splice(0, this.s.aoTargets.length);
 		var lastBound = $(this.s.dt.nTable).offset().left;
+
+		var rectVisible = this.s.dt.nScrollBody.getBoundingClientRect();
+		var rectTable = this.s.dt.nTable.getBoundingClientRect();
+		var xfix = rectTable.left - rectVisible.left;
+		this.s.mouse.xfix = xfix;
 
 		var jHeaders = this.s.dt.aoColumns.map( e => null );
 		for (var idx = 0; idx < this.s.dt.aoColumns.length; idx++)
